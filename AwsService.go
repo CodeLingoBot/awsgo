@@ -69,6 +69,16 @@ func (a *AwsService) S3UploadDir(path, bucket, key string) error {
 	return u.UploadWithIterator(aws.BackgroundContext(), &s3manager.UploadObjectsIterator{Objects: objects})
 }
 
+func (a *AwsService) S3ListObjects(path, bucket string, fn func(*s3.ListObjectsV2Output, bool) bool) error {
+	svc := s3.New(a.Session)
+	input := &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(path),
+	}
+
+	return svc.ListObjectsV2Pages(input, fn)
+}
+
 func (a *AwsService) S3DownloadObject(path, objName, bucket, key string) (int64, error) {
 
 	d := s3manager.NewDownloader(a.Session)
@@ -90,7 +100,7 @@ func (a *AwsService) S3DownloadObject(path, objName, bucket, key string) (int64,
 	})
 }
 
-func (a *AwsService) S3UploadObject(path, bucket, key string, data []byte) (*s3manager.UploadOutput, error) {
+func (a *AwsService) S3UploadObject(bucket, key string, data []byte) (*s3manager.UploadOutput, error) {
 
 	u := s3manager.NewUploader(a.Session)
 	obj := &s3manager.UploadInput{
