@@ -100,7 +100,7 @@ func (a *AwsService) S3DownloadObject(path, objName, bucket, key string) (int64,
 	})
 }
 
-func (a *AwsService) S3UploadObject(bucket, key string, data []byte) (*s3manager.UploadOutput, error) {
+func (a *AwsService) S3UploadObject(bucket, key string, data []byte, retry int) (uploadOutput *s3manager.UploadOutput, err error) {
 
 	u := s3manager.NewUploader(a.Session)
 	obj := &s3manager.UploadInput{
@@ -109,5 +109,9 @@ func (a *AwsService) S3UploadObject(bucket, key string, data []byte) (*s3manager
 		Body:   bytes.NewReader(data),
 	}
 
-	return u.Upload(obj)
+	uploadOutput, err = u.Upload(obj)
+	if err != nil && retry > 0 {
+		return a.S3UploadObject(bucket, key, data, retry-1)
+	}
+	return
 }
