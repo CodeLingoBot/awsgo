@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -79,7 +80,7 @@ func (a *AwsService) S3ListObjects(path, bucket string, fn func(*s3.ListObjectsV
 	return svc.ListObjectsV2Pages(input, fn)
 }
 
-func (a *AwsService) S3DownloadObject(path, objName, bucket, key string) (int64, error) {
+func (a *AwsService) S3DownloadObject(path, objName, bucket, key string, retry int) (int64, error) {
 
 	d := s3manager.NewDownloader(a.Session)
 
@@ -94,10 +95,17 @@ func (a *AwsService) S3DownloadObject(path, objName, bucket, key string) (int64,
 	}
 
 	defer file.Close()
-	return d.Download(file, &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(filepath.Join(path, objName)),
-	})
+	return d.Download(
+		file,
+		&s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key + "/" + objName),
+		},
+		func(dr *s3manager.Downloader) {
+			dr.RequestOptions = append(dr.RequestOptions, func(r *request.Request) {
+				r.RetryCount = retry
+			})
+		})
 }
 
 func (a *AwsService) S3UploadObject(bucket, key string, data []byte, retry int) (uploadOutput *s3manager.UploadOutput, err error) {
@@ -109,9 +117,9 @@ func (a *AwsService) S3UploadObject(bucket, key string, data []byte, retry int) 
 		Body:   bytes.NewReader(data),
 	}
 
-	uploadOutput, err = u.Upload(obj)
-	if err != nil && retry > 0 {
-		return a.S3UploadObject(bucket, key, data, retry-1)
-	}
-	return
+	return u.Upload(obj, func(u *s3manager.Uploader) {
+		u.RequestOptions = append(u.RequestOptions, func(r *request.Request) {
+			r.RetryCount = retry
+		})
+	})
 }
