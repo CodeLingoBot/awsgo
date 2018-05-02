@@ -94,8 +94,7 @@ func (a *AwsService) S3DownloadObject(path, objName, bucket, key string, retry i
 		return 0, err
 	}
 
-	defer file.Close()
-	return d.Download(
+	n, err := d.Download(
 		file,
 		&s3.GetObjectInput{
 			Bucket: aws.String(bucket),
@@ -106,6 +105,13 @@ func (a *AwsService) S3DownloadObject(path, objName, bucket, key string, retry i
 				r.RetryCount = retry
 			})
 		})
+
+	file.Close()
+	if err != nil {
+		os.Remove(file.Name())
+	}
+
+	return n, err
 }
 
 func (a *AwsService) S3UploadObject(bucket, key string, data []byte, retry int) (uploadOutput *s3manager.UploadOutput, err error) {
