@@ -80,25 +80,16 @@ func (a *AwsService) S3ListObjects(path, bucket string, fn func(*s3.ListObjectsV
 	return svc.ListObjectsV2Pages(input, fn)
 }
 
-func (a *AwsService) S3DownloadObject(path, objName, bucket, key string, retry int) (int64, error) {
+func (a *AwsService) S3DownloadObject(bucket, key string, retry int) (data []byte, n int64, err error) {
 
 	d := s3manager.NewDownloader(a.Session)
 
-	err := os.MkdirAll(path, 0755)
-	if err != nil {
-		return 0, err
-	}
-
-	file, err := os.Create(filepath.Join(path, objName))
-	if err != nil {
-		return 0, err
-	}
-
-	n, err := d.Download(
-		file,
+	b := aws.NewWriteAtBuffer([]byte{})
+	n, err = d.Download(
+		b,
 		&s3.GetObjectInput{
 			Bucket: aws.String(bucket),
-			Key:    aws.String(key + "/" + objName),
+			Key:    aws.String(key),
 		},
 		func(dr *s3manager.Downloader) {
 			dr.RequestOptions = append(dr.RequestOptions, func(r *request.Request) {
@@ -106,12 +97,9 @@ func (a *AwsService) S3DownloadObject(path, objName, bucket, key string, retry i
 			})
 		})
 
-	file.Close()
-	if err != nil {
-		os.Remove(file.Name())
-	}
+	data = b.Bytes()
 
-	return n, err
+	return
 }
 
 func (a *AwsService) S3UploadObject(bucket, key string, data []byte, retry int) (uploadOutput *s3manager.UploadOutput, err error) {
