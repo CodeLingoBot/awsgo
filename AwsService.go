@@ -102,6 +102,25 @@ func (a *AwsService) S3DownloadObject(bucket, key string, retry int) (data []byt
 	return
 }
 
+func (a *AwsService) S3DownloadObjectToFile(file *os.File, bucket, key string, retry int) (n int64, err error) {
+
+	d := s3manager.NewDownloader(a.Session)
+
+	n, err = d.Download(
+		file,
+		&s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		},
+		func(dr *s3manager.Downloader) {
+			dr.RequestOptions = append(dr.RequestOptions, func(r *request.Request) {
+				r.RetryCount = retry
+			})
+		})
+
+	return n, err
+}
+
 func (a *AwsService) S3UploadObject(bucket, key string, data []byte, retry int) (uploadOutput *s3manager.UploadOutput, err error) {
 
 	u := s3manager.NewUploader(a.Session)
