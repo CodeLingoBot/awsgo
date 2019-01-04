@@ -20,8 +20,9 @@ type (
 	}
 )
 
-func NewAwsService(region, awsKey, awsSecret string) (*AwsService, error) {
+func NewAwsService(endpoint, region, awsKey, awsSecret string) (*AwsService, error) {
 	s, err := session.NewSession(&aws.Config{
+		Endpoint:    aws.String(endpoint),
 		Region:      aws.String(region),
 		Credentials: credentials.NewStaticCredentials(awsKey, awsSecret, ""),
 	})
