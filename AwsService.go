@@ -25,6 +25,7 @@ func NewAwsService(endpoint, region, awsKey, awsSecret string) (*AwsService, err
 		Endpoint:    aws.String(endpoint),
 		Region:      aws.String(region),
 		Credentials: credentials.NewStaticCredentials(awsKey, awsSecret, ""),
+		S3ForcePathStyle: aws.Bool(true),
 	})
 	if err != nil {
 		return nil, err
