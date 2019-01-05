@@ -20,12 +20,13 @@ type (
 	}
 )
 
-func NewAwsService(endpoint, region, awsKey, awsSecret string) (*AwsService, error) {
+func NewAwsService(endpoint, region, awsKey, awsSecret string, s3ForcePathStyle, disableSSL bool) (*AwsService, error) {
 	s, err := session.NewSession(&aws.Config{
-		Endpoint:    aws.String(endpoint),
-		Region:      aws.String(region),
-		Credentials: credentials.NewStaticCredentials(awsKey, awsSecret, ""),
-		S3ForcePathStyle: aws.Bool(true),
+		Endpoint:         aws.String(endpoint),
+		Region:           aws.String(region),
+		Credentials:      credentials.NewStaticCredentials(awsKey, awsSecret, ""),
+		S3ForcePathStyle: aws.Bool(s3ForcePathStyle),
+		DisableSSL:       aws.Bool(disableSSL),
 	})
 	if err != nil {
 		return nil, err
