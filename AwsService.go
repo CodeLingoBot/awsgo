@@ -2,6 +2,7 @@ package awsgo
 
 import (
 	"bytes"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -34,7 +35,7 @@ func NewAwsService(endpoint, region, awsKey, awsSecret string, s3ForcePathStyle,
 	return &AwsService{Session: s}, nil
 }
 
-func (a *AwsService) S3UploadDir(path, bucket, key string) error {
+func (a *AwsService) UploadDir(path, bucket, key string) error {
 
 	u := s3manager.NewUploader(a.Session)
 	var (
@@ -50,7 +51,7 @@ func (a *AwsService) S3UploadDir(path, bucket, key string) error {
 	for _, f := range files {
 		s3Path = filepath.Join(key, f.Name())
 		if f.IsDir() {
-			err = a.S3UploadDir(filepath.Join(path, f.Name()), bucket, s3Path)
+			err = a.UploadDir(filepath.Join(path, f.Name()), bucket, s3Path)
 			if err != nil {
 				return err
 			}
@@ -73,7 +74,7 @@ func (a *AwsService) S3UploadDir(path, bucket, key string) error {
 	return u.UploadWithIterator(aws.BackgroundContext(), &s3manager.UploadObjectsIterator{Objects: objects})
 }
 
-func (a *AwsService) S3ListObjects(path, bucket string, fn func(*s3.ListObjectsV2Output, bool) bool) error {
+func (a *AwsService) ListObjects(path, bucket string, fn func(*s3.ListObjectsV2Output, bool) bool) error {
 	svc := s3.New(a.Session)
 	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket),
@@ -83,7 +84,22 @@ func (a *AwsService) S3ListObjects(path, bucket string, fn func(*s3.ListObjectsV
 	return svc.ListObjectsV2Pages(input, fn)
 }
 
-func (a *AwsService) S3DownloadObject(bucket, key string, retry int) (data []byte, n int64, err error) {
+func (a *AwsService) ObjectExists(bucket, path string) (bool, error) {
+	svc := s3.New(a.Session)
+	_, err := svc.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(path),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok && (aerr.Code() == "NotFound" || aerr.Code() == s3.ErrCodeNoSuchKey) {
+			err = nil
+		}
+	}
+
+	return err == nil, err
+}
+
+func (a *AwsService) DownloadObject(bucket, key string, retry int) (data []byte, n int64, err error) {
 
 	d := s3manager.NewDownloader(a.Session)
 
@@ -105,7 +121,7 @@ func (a *AwsService) S3DownloadObject(bucket, key string, retry int) (data []byt
 	return
 }
 
-func (a *AwsService) S3DownloadObjectToFile(file *os.File, bucket, key string, retry int) (n int64, err error) {
+func (a *AwsService) DownloadObjectToFile(file *os.File, bucket, key string, retry int) (n int64, err error) {
 
 	d := s3manager.NewDownloader(a.Session)
 
@@ -124,7 +140,7 @@ func (a *AwsService) S3DownloadObjectToFile(file *os.File, bucket, key string, r
 	return n, err
 }
 
-func (a *AwsService) S3UploadObject(bucket, key string, data []byte, retry int) (uploadOutput *s3manager.UploadOutput, err error) {
+func (a *AwsService) UploadObject(bucket, key string, data []byte, retry int) (uploadOutput *s3manager.UploadOutput, err error) {
 
 	u := s3manager.NewUploader(a.Session)
 	obj := &s3manager.UploadInput{
