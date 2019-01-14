@@ -90,13 +90,15 @@ func (a *AwsService) ObjectExists(bucket, path string) (bool, error) {
 		Bucket: aws.String(bucket),
 		Key:    aws.String(path),
 	})
+
+	exists := err != nil
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok && (aerr.Code() == "NotFound" || aerr.Code() == s3.ErrCodeNoSuchKey) {
 			err = nil
 		}
 	}
 
-	return err == nil, err
+	return exists, err
 }
 
 func (a *AwsService) DownloadObject(bucket, key string, retry int) (data []byte, n int64, err error) {
