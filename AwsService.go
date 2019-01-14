@@ -91,7 +91,7 @@ func (a *AwsService) ObjectExists(bucket, path string) (bool, error) {
 		Key:    aws.String(path),
 	})
 
-	exists := err != nil
+	exists := err == nil
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok && (aerr.Code() == "NotFound" || aerr.Code() == s3.ErrCodeNoSuchKey) {
 			err = nil
