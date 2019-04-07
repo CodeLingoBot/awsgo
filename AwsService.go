@@ -142,18 +142,22 @@ func (a *AwsService) DownloadObjectToFile(file *os.File, bucket, key string, ret
 	return n, err
 }
 
+func (a *AwsService) UploadInput(obj *s3manager.UploadInput, retry int) (uploadOutput *s3manager.UploadOutput, err error) {
+
+	return s3manager.NewUploader(a.Session).Upload(obj, func(u *s3manager.Uploader) {
+		u.RequestOptions = append(u.RequestOptions, func(r *request.Request) {
+			r.RetryCount = retry
+		})
+	})
+}
+
 func (a *AwsService) UploadObject(bucket, key string, data []byte, retry int) (uploadOutput *s3manager.UploadOutput, err error) {
 
-	u := s3manager.NewUploader(a.Session)
 	obj := &s3manager.UploadInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		Body:   bytes.NewReader(data),
 	}
 
-	return u.Upload(obj, func(u *s3manager.Uploader) {
-		u.RequestOptions = append(u.RequestOptions, func(r *request.Request) {
-			r.RetryCount = retry
-		})
-	})
+	return a.UploadInput(obj, retry)
 }
