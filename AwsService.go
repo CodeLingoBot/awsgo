@@ -2,6 +2,7 @@ package awsgo
 
 import (
 	"bytes"
+	"context"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"io/ioutil"
 	"os"
@@ -85,11 +86,7 @@ func (a *AwsService) ListObjects(path, bucket string, fn func(*s3.ListObjectsV2O
 }
 
 func (a *AwsService) ObjectExists(bucket, path string) (bool, error) {
-	svc := s3.New(a.Session)
-	_, err := svc.HeadObject(&s3.HeadObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(path),
-	})
+	_, err := a.ObjectInfo(bucket, path)
 
 	exists := err == nil
 	if err != nil {
@@ -99,6 +96,14 @@ func (a *AwsService) ObjectExists(bucket, path string) (bool, error) {
 	}
 
 	return exists, err
+}
+
+func (a *AwsService) ObjectInfo(bucket, path string) (*s3.HeadObjectOutput, error) {
+	svc := s3.New(a.Session)
+	return svc.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(path),
+	})
 }
 
 func (a *AwsService) DownloadObject(bucket, key string, retry int) (data []byte, n int64, err error) {
@@ -140,6 +145,17 @@ func (a *AwsService) DownloadObjectToFile(file *os.File, bucket, key string, ret
 		})
 
 	return n, err
+}
+
+func (a *AwsService) GetObject(ctx context.Context, bucket, key string) (*s3.GetObjectOutput, error) {
+
+	svc := s3.New(a.Session)
+	input := &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}
+
+	return svc.GetObjectWithContext(ctx, input)
 }
 
 func (a *AwsService) UploadInput(obj *s3manager.UploadInput, retry int) (uploadOutput *s3manager.UploadOutput, err error) {
