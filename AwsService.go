@@ -3,12 +3,12 @@ package awsgo
 import (
 	"bytes"
 	"context"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -70,6 +70,8 @@ func (a *AwsService) UploadDir(path, bucket, key string) error {
 			},
 		}
 		objects = append(objects, obj)
+
+		file.Close()
 	}
 
 	return u.UploadWithIterator(aws.BackgroundContext(), &s3manager.UploadObjectsIterator{Objects: objects})
